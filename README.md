@@ -1,6 +1,5 @@
 ### 数据库配置：
 
-<img width="903" height="857" alt="c60324da3361388aa4471476c5875082" src="https://github.com/user-attachments/assets/dd45d91b-15ee-4b29-b427-5a6d3d489f81" />
 
 先运行仓库里的sql查询生成表（不要用原来的），然后到server.js里面的数据库配置改成自己的，正常改个user、database、password就ok了。
 
@@ -10,6 +9,9 @@
 先去下好node（node现在自带npm）和vue3（直接csdn一步一步来），然后打开项目后在终端根目录输入npm i，然后npm run dev 。
 ### 后端：
 根目录下的cdr-backend文件夹是后端，cd到这个文件夹之后node server.js
+
+<img width="903" height="857" alt="c60324da3361388aa4471476c5875082" src="https://github.com/user-attachments/assets/dd45d91b-15ee-4b29-b427-5a6d3d489f81" />
+
 ### 接下来的任务：
 大家接下来主要是去改那个sql，或者在后端请求里面加上对应筛选，要筛出来有的转接的数据，比如下面这个，其实上是拨同一个号码，只是过了+865925562000的转接，从后面的bleg_uuid和uuid里面可以看出来是怎么转接的
 
