@@ -13,7 +13,7 @@
 <img width="903" height="857" alt="c60324da3361388aa4471476c5875082" src="https://github.com/user-attachments/assets/dd45d91b-15ee-4b29-b427-5a6d3d489f81" />
 
 ### 接下来的任务：
-大家接下来主要是去改那个sql，或者在后端请求里面加上对应筛选，要筛出来有的转接的数据，比如下面这个，其实上是拨同一个号码，只是过了+865925562000的转接，从后面的bleg_uuid和uuid里面可以看出来是怎么转接的
+接下来主要是去改那个sql，或者在后端请求里面加上对应筛选，要筛出来有的转接的数据，比如下面这个，其实上是拨同一个号码，只是过了+865925562000的转接，从后面的bleg_uuid和uuid里面可以看出来是怎么转接的
 
 <img width="717" height="198" alt="0fefd06e679199f717241e2bfb270af6" src="https://github.com/user-attachments/assets/a0d5e9d8-8545-4ebf-afce-fce162d10cb6" />
 
