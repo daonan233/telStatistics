@@ -17,13 +17,32 @@ app.use(express.json());
 
 app.get('/api/cdr', async (req, res) => {
     try {
-        const { destination_number } = req.query;
-        let whereClause = '';
+        const { destination_number, start_date, end_date } = req.query;
+        let whereConditions = [];
         let queryParams = [];
+        let paramIndex = 1;
 
         if (destination_number) {
-            whereClause = 'WHERE destination_number ILIKE $1';
+            whereConditions.push(`destination_number ILIKE $${paramIndex}`);
             queryParams.push(`%${destination_number}%`);
+            paramIndex++;
+        }
+
+        if (start_date) {
+            whereConditions.push(`start_stamp >= $${paramIndex}`);
+            queryParams.push(start_date);
+            paramIndex++;
+        }
+
+        if (end_date) {
+            whereConditions.push(`end_stamp <= $${paramIndex}`);
+            queryParams.push(end_date);
+            paramIndex++;
+        }
+
+        let whereClause = '';
+        if (whereConditions.length > 0) {
+            whereClause = 'WHERE ' + whereConditions.join(' AND ');
         }
 
         //查询所有数据，不进行分页

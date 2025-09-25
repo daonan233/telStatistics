@@ -2,7 +2,8 @@
 import { ref, onMounted, computed, nextTick } from 'vue'
 import { ElMessage, } from 'element-plus'
 import * as echarts from 'echarts'
-import {Clock, DataBoard, Document, Download, Search} from '@element-plus/icons-vue'
+import {ArrowRightBold, Clock, DataBoard, Document, Download, Search} from '@element-plus/icons-vue'
+
 
 const searchQuery = ref('')
 const allData = ref([]) // 存储所有数据
@@ -16,6 +17,8 @@ const pageSize = ref(10)
 const totalRecords = ref(0)
 const dateChart = ref(null)
 const durationChart = ref(null)
+const startDate = ref('')
+const endDate = ref('')
 
 //计算总数
 const avgDuration = computed(() => {
@@ -40,7 +43,19 @@ const fetchData = async () => {
   loading.value = true
 
   try {
-    const response = await fetch(`http://localhost:3000/api/cdr?destination_number=${searchQuery.value}`)
+    // 构建查询参数
+    const params = new URLSearchParams()
+    if (searchQuery.value) {
+      params.append('destination_number', searchQuery.value)
+    }
+    if (startDate.value) {
+      params.append('start_date', startDate.value)
+    }
+    if (endDate.value) {
+      params.append('end_date', endDate.value)
+    }
+
+    const response = await fetch(`http://localhost:3000/api/cdr?${params.toString()}`)
     const data = await response.json()
 
     if (data.success) {
@@ -61,13 +76,7 @@ const fetchData = async () => {
 
 //搜索过滤
 const applyFilter = () => {
-  if (searchQuery.value) {
-    filteredData.value = allData.value.filter(item =>
-        item.destination_number && item.destination_number.includes(searchQuery.value)
-    )
-  } else {
-    filteredData.value = allData.value
-  }
+  filteredData.value = allData.value
 
   totalRecords.value = filteredData.value.length
   currentPage.value = 1 // 重置到第一页
@@ -79,6 +88,29 @@ const applyFilter = () => {
   nextTick(() => {
     initCharts()
   })
+}
+
+
+//清除时间筛选
+const clearDateFilter = () => {
+  startDate.value = ''
+  endDate.value = ''
+  fetchData()
+}
+
+//日期验证
+const disabledStartDate = (time) => {
+  if (endDate.value) {
+    return time.getTime() > new Date(endDate.value).getTime()
+  }
+  return false
+}
+
+const disabledEndDate = (time) => {
+  if (startDate.value) {
+    return time.getTime() < new Date(startDate.value).getTime()
+  }
+  return false
 }
 
 //更新当前页数据
@@ -293,7 +325,7 @@ const exportData = (exportType = 'all') => {
         `"${item.start_stamp || ''}"`,
         `"${item.end_stamp || ''}"`,
         item.duration || 0,
-        `"${caller_zh_name || ''}"`
+        `"${item.caller_zh_name || ''}"`
       ].join(','))
     ].join('\n')
 
@@ -336,8 +368,8 @@ onMounted(() => {
 <template>
   <div class="container">
     <el-container>
-      <el-header style="background-color: #FF88BB; color: white; padding: 0 20px;">
-        <h1 style="margin-left:40vw; align-content: center;line-height: 60px; font-family:'幼圆';font-weight: bold">通话记录统计分析系统</h1>
+      <el-header style="background-color: #FF88BB; color: white; padding: 0 25px;border-radius: 20px">
+        <h1 style="margin-left:40vw; align-content: center;line-height: 60px; font-family:'幼圆';font-weight: bold;">通话记录统计分析系统</h1>
       </el-header>
 
       <el-main>
@@ -348,13 +380,12 @@ onMounted(() => {
               <span>数据查询</span>
             </div>
           </template>
-          <el-row :gutter="20">
+          <el-row :gutter="20" style="margin-bottom: 15px;">
             <el-col :span="18">
               <el-input
                   v-model="searchQuery"
                   placeholder="请输入目标号码进行模糊查询（请去掉+号）"
                   clearable
-                  @input="handleSearch"
                   @clear="handleClear"
                   size="large">
                 <template #prefix>
@@ -363,8 +394,37 @@ onMounted(() => {
               </el-input>
             </el-col>
             <el-col :span="6">
-              <el-button type="primary" @click="fetchData" size="large" style="width: 100%;background:#FF88BB">
+              <el-button @click="fetchData" size="large" style="width: 100%;background:#FF88BB;color:#fff">
                 查询号码记录
+              </el-button>
+            </el-col>
+          </el-row>
+
+          <el-row :gutter="20">
+            <el-col :span="9">
+              <el-date-picker
+                  v-model="startDate"
+                  type="datetime"
+                  placeholder="选择开始时间"
+                  style="width: 100%"
+                  value-format="YYYY-MM-DDTHH:mm:ss"
+                  :disabled-date="disabledStartDate"
+              />
+            </el-col>
+            <el-col :span="9">
+              <el-date-picker
+                  v-model="endDate"
+                  type="datetime"
+                  placeholder="选择结束时间"
+                  style="width: 100%"
+                  value-format="YYYY-MM-DDTHH:mm:ss"
+                  :disabled-date="disabledEndDate"
+              />
+            </el-col>
+
+            <el-col :span="6">
+              <el-button @click="clearDateFilter" size="large" style="width: 100%;background-color: #55DDEE;color: #fff;">
+                清除时间筛选
               </el-button>
             </el-col>
           </el-row>
