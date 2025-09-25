@@ -3,8 +3,6 @@
 
 <img width="795" height="450" alt="43f6c6d5b4e5d5516d87041e7bcfa499" src="https://github.com/user-attachments/assets/7c7765a8-f4ca-49cd-ac3e-8157e0d16ecd" />
 
-### 前端：
-先去下好node（node现在自带npm）和vue3（直接csdn一步一步来），然后打开项目后在终端根目录输入npm i，然后npm run dev 。
 ### 后端：
 根目录下的cdr-backend文件夹是后端，cd到这个文件夹之后node server.js
 
