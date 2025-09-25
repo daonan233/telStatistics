@@ -13,3 +13,7 @@
 
 <img width="717" height="198" alt="0fefd06e679199f717241e2bfb270af6" src="https://github.com/user-attachments/assets/a0d5e9d8-8545-4ebf-afce-fce162d10cb6" />
 
+### 界面图
+<img width="2538" height="1244" alt="image" src="https://github.com/user-attachments/assets/9078d659-457d-46c4-a112-347f04f33894" />
+<img width="2499" height="934" alt="image" src="https://github.com/user-attachments/assets/9da7af20-14e3-4e84-b35b-a72c3beb1f83" />
+
