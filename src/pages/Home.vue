@@ -3,6 +3,8 @@ import { ref, onMounted, computed, nextTick } from 'vue'
 import { ElMessage, } from 'element-plus'
 import * as echarts from 'echarts'
 import {ArrowRightBold, Clock, DataBoard, Document, Download, Search} from '@element-plus/icons-vue'
+import { useRouter } from 'vue-router'
+const router = useRouter()
 
 
 const searchQuery = ref('')
@@ -195,7 +197,7 @@ const initCharts = () => {
         label: {
           show: false,
           position: 'top',
-          color: '#39C5BB',
+          color: '#55DDEE',
           fontWeight: 'bold',
           fontSize: 15,
           formatter: '{c}'
@@ -204,10 +206,10 @@ const initCharts = () => {
           label: {
             show: true,
             position: 'top',
-            color: '#39C5BB',
+            color: '#55DDEE',
             fontWeight: 'bold',
             fontSize: 15,
-            formatter: '{c}'
+            formatter: '{c}',
           },
           itemStyle: {
             shadowBlur: 10,
@@ -350,6 +352,16 @@ const exportData = (exportType = 'all') => {
   }
 }
 
+const viewDetail = (row) => {
+  // 使用路由跳转，传递ID参数
+  router.push({
+    path: `/details`,
+    query: {
+      id: row.id
+    }
+  })
+}
+
 onMounted(() => {
   fetchData()
 
@@ -384,7 +396,7 @@ onMounted(() => {
             <el-col :span="18">
               <el-input
                   v-model="searchQuery"
-                  placeholder="请输入目标号码进行模糊查询（请去掉+号）"
+                  placeholder="请输入被叫号码进行模糊查询（请去掉+号）"
                   clearable
                   @clear="handleClear"
                   size="large">
@@ -520,17 +532,17 @@ onMounted(() => {
               :data="currentPageData"
               stripe
               border
-              style="width: 100%;align-content: center;margin-left: 80px"
+              style="width: 100%;align-content: center;margin-left: 100px"
               v-loading="loading">
             <el-table-column prop="id" label="ID" width="100" sortable></el-table-column>
-            <el-table-column prop="caller_id_number" label="主叫号码" width="250"></el-table-column>
-            <el-table-column prop="destination_number" label="被叫号码" width="250"></el-table-column>
-            <el-table-column prop="start_stamp" label="开始时间" width="280" sortable>
+            <el-table-column prop="caller_id_number" label="主叫号码" width="200"></el-table-column>
+            <el-table-column prop="destination_number" label="被叫号码" width="200"></el-table-column>
+            <el-table-column prop="start_stamp" label="开始时间" width="230" sortable>
               <template #default="scope">
                 {{ formatTime(scope.row.start_stamp) }}
               </template>
             </el-table-column>
-            <el-table-column prop="end_stamp" label="结束时间" width="280" sortable>
+            <el-table-column prop="end_stamp" label="结束时间" width="230" sortable>
               <template #default="scope">
                 {{ formatTime(scope.row.end_stamp) }}
               </template>
@@ -541,6 +553,18 @@ onMounted(() => {
               </template>
             </el-table-column>
             <el-table-column prop="caller_zh_name" label="呼出人姓名" width="150"></el-table-column>
+
+            <!-- 添加操作列 -->
+            <el-table-column label="操作" width="150" fixed="right" align="center">
+              <template #default="scope">
+                <el-button
+                    type="primary"
+                    size="small"
+                    @click="viewDetail(scope.row)">
+                  查看详情
+                </el-button>
+              </template>
+            </el-table-column>
           </el-table>
 
           <div style="margin-top: 20px; display: flex; justify-content: space-between; align-items: center;">
