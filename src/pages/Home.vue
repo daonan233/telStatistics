@@ -2,10 +2,10 @@
 import { ref, onMounted, computed, nextTick } from 'vue'
 import { ElMessage, } from 'element-plus'
 import * as echarts from 'echarts'
-import {ArrowRightBold, Clock, DataBoard, Document, Download, Search} from '@element-plus/icons-vue'
+import {Clock, DataBoard, Document, Download, Search} from '@element-plus/icons-vue'
 import { useRouter } from 'vue-router'
-const router = useRouter()
 
+const router = useRouter()
 
 const searchQuery = ref('')
 const allData = ref([]) // 存储所有数据
@@ -21,6 +21,38 @@ const dateChart = ref(null)
 const durationChart = ref(null)
 const startDate = ref('')
 const endDate = ref('')
+
+// 保存搜索状态
+const saveSearchState = () => {
+  const state = {
+    searchQuery: searchQuery.value,
+    startDate: startDate.value,
+    endDate: endDate.value,
+    currentPage: currentPage.value,
+    pageSize: pageSize.value,
+    totalRecords: totalRecords.value
+  }
+  sessionStorage.setItem('homeSearchState', JSON.stringify(state))
+}
+
+// 加载搜索状态
+const loadSearchState = () => {
+  const savedState = sessionStorage.getItem('homeSearchState')
+  if (savedState) {
+    const state = JSON.parse(savedState)
+    searchQuery.value = state.searchQuery || ''
+    startDate.value = state.startDate || ''
+    endDate.value = state.endDate || ''
+    currentPage.value = state.currentPage || 1
+    pageSize.value = state.pageSize || 10
+    totalRecords.value = state.totalRecords || 0
+
+    // 清除保存的状态，避免重复加载
+    sessionStorage.removeItem('homeSearchState')
+    return true
+  }
+  return false
+}
 
 //计算总数
 const avgDuration = computed(() => {
@@ -64,6 +96,8 @@ const fetchData = async () => {
       allData.value = data.data
       // 应用搜索过滤
       applyFilter()
+      // 保存搜索状态
+      saveSearchState()
       ElMessage.success(`查询到 ${data.data.length} 条记录`)
     } else {
       ElMessage.error('获取数据失败: ' + data.message)
@@ -93,10 +127,18 @@ const applyFilter = () => {
 }
 
 
-//清除时间筛选
+// 清除时间筛选
 const clearDateFilter = () => {
   startDate.value = ''
   endDate.value = ''
+  fetchData()
+}
+
+// 清除所有筛选
+const clearAllFilter = ()=>{
+  startDate.value = ''
+  endDate.value = ''
+  searchQuery.value = ''
   fetchData()
 }
 
@@ -284,23 +326,28 @@ const initCharts = () => {
 
 const handleSearch = () => {
   applyFilter()
+  saveSearchState()
 }
 
 const handleClear = () => {
   searchQuery.value = ''
   applyFilter()
+  saveSearchState()
 }
 
 const handlePageChange = (page) => {
   currentPage.value = page
   updateCurrentPageData()
+  saveSearchState()
 }
 
 const handlePageSizeChange = (size) => {
   pageSize.value = size
   currentPage.value = 1
   updateCurrentPageData()
+  saveSearchState()
 }
+
 //导出csv文件，
 const exportData = (exportType = 'all') => {
   try {
@@ -353,6 +400,9 @@ const exportData = (exportType = 'all') => {
 }
 
 const viewDetail = (row) => {
+  // 保存当前搜索状态
+  saveSearchState()
+
   // 使用路由跳转，传递ID参数
   router.push({
     path: `/details`,
@@ -363,7 +413,16 @@ const viewDetail = (row) => {
 }
 
 onMounted(() => {
-  fetchData()
+  // 尝试加载保存的搜索状态
+  const hasSavedState = loadSearchState()
+
+  if (hasSavedState) {
+    // 如果有保存的状态，重新获取数据
+    fetchData()
+  } else {
+    // 否则执行默认的数据获取
+    fetchData()
+  }
 
   //监听窗口大小变化 重新渲染图表
   window.addEventListener('resize', () => {
@@ -434,9 +493,14 @@ onMounted(() => {
               />
             </el-col>
 
-            <el-col :span="6">
+            <el-col :span="3">
               <el-button @click="clearDateFilter" size="large" style="width: 100%;background-color: #55DDEE;color: #fff;">
                 清除时间筛选
+              </el-button>
+            </el-col>
+            <el-col :span="3">
+              <el-button @click="clearAllFilter" size="large" style="width: 100%;background-color: #DDBBFF;color: #fff;">
+                清除所有筛选
               </el-button>
             </el-col>
           </el-row>

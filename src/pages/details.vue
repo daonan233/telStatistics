@@ -1,5 +1,5 @@
 <script setup>
-import { ref, onMounted, computed } from 'vue'
+import { ref, onMounted, computed, onBeforeUnmount } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import {ArrowLeft, Refresh, Download, Clock, Microphone} from '@element-plus/icons-vue'
@@ -118,10 +118,22 @@ const refreshData = () => {
   fetchDetail()
 }
 
+// 保存返回状态
+const saveReturnState = () => {
+  // 从 Home 页面传递的状态已经在 sessionStorage 中，这里不需要额外保存
+  // 只需要确保在返回时不删除状态即可
+}
+
 // 返回上一页
 const goBack = () => {
+  saveReturnState()
   router.back()
 }
+
+// 在组件卸载前保存状态（防止用户直接点击浏览器返回）
+onBeforeUnmount(() => {
+  saveReturnState()
+})
 
 onMounted(() => {
   fetchDetail()
