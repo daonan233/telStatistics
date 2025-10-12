@@ -118,22 +118,11 @@ const refreshData = () => {
   fetchDetail()
 }
 
-// 保存返回状态
-const saveReturnState = () => {
-  // 从 Home 页面传递的状态已经在 sessionStorage 中，这里不需要额外保存
-  // 只需要确保在返回时不删除状态即可
-}
-
 // 返回上一页
 const goBack = () => {
-  saveReturnState()
   router.back()
 }
 
-// 在组件卸载前保存状态（防止用户直接点击浏览器返回）
-onBeforeUnmount(() => {
-  saveReturnState()
-})
 
 onMounted(() => {
   fetchDetail()
@@ -185,7 +174,12 @@ onMounted(() => {
 
               <!-- 通话双方信息 -->
               <el-descriptions-item label="主叫号码">{{ detailData.caller_id_number }}</el-descriptions-item>
-              <el-descriptions-item label="主叫名称">{{ detailData.caller_id_name || '无' }}</el-descriptions-item>
+              <el-descriptions-item label="转接号码">
+                <span v-if="detailData.trans_number" style="color: #1890ff; font-weight: bold;">
+                  {{ detailData.trans_number }}
+                </span>
+                <span v-else>无</span>
+              </el-descriptions-item>
               <el-descriptions-item label="呼出人姓名">{{ detailData.caller_zh_name || '无' }}</el-descriptions-item>
               <el-descriptions-item label="被叫号码">{{ detailData.destination_number }}</el-descriptions-item>
 
@@ -218,7 +212,6 @@ onMounted(() => {
                 <span v-else>无</span>
               </el-descriptions-item>
             </el-descriptions>
-
 
             <el-card v-if="detailData.has_audio" shadow="never" style="margin-bottom: 20px;">
               <template #header>
@@ -287,6 +280,7 @@ onMounted(() => {
                   <el-card>
                     <h4>通话开始</h4>
                     <p>主叫: {{ detailData.caller_id_number }} → 被叫: {{ detailData.destination_number }}</p>
+                    <p v-if="detailData.trans_number">转接至: {{ detailData.trans_number }}</p>
                   </el-card>
                 </el-timeline-item>
 
@@ -299,6 +293,7 @@ onMounted(() => {
                   <el-card>
                     <h4>通话应答</h4>
                     <p>被叫方接听电话，开始计费</p>
+                    <p v-if="detailData.trans_number">转接至: {{ detailData.trans_number }}</p>
                   </el-card>
                 </el-timeline-item>
 
@@ -311,6 +306,7 @@ onMounted(() => {
                     <h4>通话结束</h4>
                     <p>挂断原因: {{ detailData.hangup_cause || '未知' }}</p>
                     <p>总时长: {{ detailData.duration }} 秒</p>
+                    <p v-if="detailData.trans_number">转接至: {{ detailData.trans_number }}</p>
                   </el-card>
                 </el-timeline-item>
               </el-timeline>

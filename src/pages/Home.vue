@@ -364,16 +364,17 @@ const exportData = (exportType = 'all') => {
       ElMessage.warning(`没有${dataType}数据可导出`)
       return
     }
-    const headers = ['ID', '主叫号码', '被叫号码', '开始时间', '结束时间', '通话时长(秒)','呼出人姓名']
+    const headers = ['ID', '主叫号码', '被叫号码','转接号码', '开始时间', '结束时间', '计费时长(秒)','呼出人姓名']
     const csvContent = [
       headers.join(','), // 表头
       ...dataToExport.map(item => [
         item.id,
         `"${item.caller_id_number || ''}"`,
         `"${item.destination_number || ''}"`,
+        `"${item.trans_number || ''}"`,
         `"${item.start_stamp || ''}"`,
         `"${item.end_stamp || ''}"`,
-        item.duration || 0,
+        item.billsec || 0,
         `"${item.caller_zh_name || ''}"`
       ].join(','))
     ].join('\n')
@@ -598,22 +599,28 @@ onMounted(() => {
               border
               style="width: 100%;align-content: center;margin-left: 100px"
               v-loading="loading">
-            <el-table-column prop="id" label="ID" width="100" sortable></el-table-column>
-            <el-table-column prop="caller_id_number" label="主叫号码" width="200"></el-table-column>
-            <el-table-column prop="destination_number" label="被叫号码" width="200"></el-table-column>
-            <el-table-column prop="start_stamp" label="开始时间" width="230" sortable>
+            <el-table-column prop="id" label="ID" width="80" sortable></el-table-column>
+            <el-table-column prop="caller_id_number" label="主叫号码" width="150"></el-table-column>
+            <el-table-column prop="destination_number" label="被叫号码" width="150"></el-table-column>
+            <el-table-column prop="trans_number" label="转接号码" width="150"></el-table-column>
+            <el-table-column prop="start_stamp" label="开始时间" width="200" sortable>
               <template #default="scope">
                 {{ formatTime(scope.row.start_stamp) }}
               </template>
             </el-table-column>
-            <el-table-column prop="end_stamp" label="结束时间" width="230" sortable>
+            <el-table-column prop="end_stamp" label="结束时间" width="200" sortable>
               <template #default="scope">
                 {{ formatTime(scope.row.end_stamp) }}
               </template>
             </el-table-column>
-            <el-table-column prop="duration" label="通话时长(秒)" width="140" sortable>
+            <el-table-column prop="billsec" label="通话时长(秒)" width="100" sortable>
               <template #default="scope">
                 {{ scope.row.duration }}
+              </template>
+            </el-table-column>
+            <el-table-column prop="billsec" label="计费时长(秒)" width="100" sortable>
+              <template #default="scope">
+                {{ scope.row.billsec }}
               </template>
             </el-table-column>
             <el-table-column prop="caller_zh_name" label="呼出人姓名" width="150"></el-table-column>
