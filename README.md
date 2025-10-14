@@ -9,6 +9,9 @@
 #### 详情页面
 - 返回首页后对原筛选数据进行持久化
 - 可下载录音或在线播放
+
+#### 数据库、服务器配置
+- 使用了config.js和.env文件两种形式进行配置
 ___ 
 
 ### 数据库配置
@@ -24,11 +27,13 @@ ___
 
 ### 界面图
 #### 首页
-<img width="2534" height="1254" alt="image" src="https://github.com/user-attachments/assets/b16187d7-689a-47df-9a81-078730b20e56" />
-<img width="2499" height="934" alt="image" src="https://github.com/user-attachments/assets/9da7af20-14e3-4e84-b35b-a72c3beb1f83" />
+<img width="2559" height="1390" alt="image" src="https://github.com/user-attachments/assets/b75b2a03-1a85-4235-b43c-907cbffc5596" />
+<img width="2517" height="903" alt="image" src="https://github.com/user-attachments/assets/d78dc0f6-14fd-4f4e-a285-1e72f5c91671" />
+
 
 #### 详情页
-<img width="2544" height="1391" alt="image" src="https://github.com/user-attachments/assets/23ab47a3-3a10-49aa-9e67-f61f62941fe4" />
-<img width="2496" height="875" alt="image" src="https://github.com/user-attachments/assets/d519b37e-192b-4b3c-9e8b-bd06512f79ec" />
+<img width="2559" height="1028" alt="image" src="https://github.com/user-attachments/assets/bf132ba0-ac93-45a3-83ff-cc6056ce7bce" />
+<img width="2554" height="1340" alt="image" src="https://github.com/user-attachments/assets/245e345a-ee92-4772-a2fb-c2cdffaf03b0" />
+
 
 
