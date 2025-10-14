@@ -2,7 +2,8 @@
 import { ref, onMounted, computed, onBeforeUnmount } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import {ArrowLeft, Refresh, Download, Clock, Microphone} from '@element-plus/icons-vue'
+import { ArrowLeft, Refresh, Download, Clock, Microphone } from '@element-plus/icons-vue'
+import { cdrApi } from '@/service/api' // 导入封装的API
 
 const route = useRoute()
 const router = useRouter()
@@ -16,7 +17,7 @@ const audioDuration = ref(0)
 // 计算音频URL
 const audioUrl = computed(() => {
   if (!detailData.value?.uuid) return null
-  return `http://localhost:3000/api/cdr/audio/${detailData.value.uuid}`
+  return cdrApi.getAudioUrl(detailData.value.uuid)
 })
 
 // 时间格式化
@@ -53,17 +54,19 @@ const downloadAudio = async () => {
 
   downloading.value = true
   try {
-    const response = await fetch(audioUrl.value)
-    if (!response.ok) {
-      throw new Error('下载失败')
-    }
+    const blob = await cdrApi.downloadAudio(detailData.value.uuid)
 
-    const blob = await response.blob()
     const url = window.URL.createObjectURL(blob)
     const a = document.createElement('a')
     a.style.display = 'none'
     a.href = url
-    a.download = `recording_${detailData.value.uuid}.wav`
+
+    // 生成文件名
+    const now = new Date()
+    const timestamp = `${now.getFullYear()}${(now.getMonth()+1).toString().padStart(2, '0')}${now.getDate().toString().padStart(2, '0')}_${now.getHours().toString().padStart(2, '0')}${now.getMinutes().toString().padStart(2, '0')}`
+    const filename = `recording_${detailData.value.uuid}_${timestamp}.wav`
+
+    a.download = filename
     document.body.appendChild(a)
     a.click()
     window.URL.revokeObjectURL(url)
@@ -72,13 +75,13 @@ const downloadAudio = async () => {
     ElMessage.success('录音下载成功')
   } catch (err) {
     console.error('下载失败:', err)
-    ElMessage.error('录音下载失败')
+    // 错误信息已经在API层显示，这里不需要重复显示
   } finally {
     downloading.value = false
   }
 }
 
-// 获取详情数据
+// 获取详情数据 - 使用封装的API
 const fetchDetail = async () => {
   const id = route.query.id
   if (!id) {
@@ -90,24 +93,16 @@ const fetchDetail = async () => {
   error.value = ''
 
   try {
-    const response = await fetch(`http://localhost:3000/api/cdr/${id}`)
+    const response = await cdrApi.getCDRDetail(id)
 
-    if (!response.ok) {
-      throw new Error(`HTTP错误: ${response.status}`)
-    }
-
-    const data = await response.json()
-
-    if (data.success) {
-      detailData.value = data.data
+    if (response.success) {
+      detailData.value = response.data
     } else {
-      error.value = '获取详情失败: ' + (data.message || '未知错误')
-      ElMessage.error(error.value)
+      error.value = '获取详情失败: ' + (response.message || '未知错误')
     }
   } catch (err) {
     console.error('获取详情失败:', err)
     error.value = `获取详情失败: ${err.message}`
-    ElMessage.error(error.value)
   } finally {
     loading.value = false
   }
@@ -122,7 +117,6 @@ const refreshData = () => {
 const goBack = () => {
   router.back()
 }
-
 
 onMounted(() => {
   fetchDetail()

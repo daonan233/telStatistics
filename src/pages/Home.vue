@@ -1,16 +1,17 @@
 <script setup>
 import { ref, onMounted, computed, nextTick } from 'vue'
-import { ElMessage, } from 'element-plus'
+import { ElMessage } from 'element-plus'
 import * as echarts from 'echarts'
-import {Clock, DataBoard, Document, Download, Search} from '@element-plus/icons-vue'
+import { Clock, DataBoard, Document, Download, Search } from '@element-plus/icons-vue'
 import { useRouter } from 'vue-router'
+import { cdrApi } from '@/service/api'
 
 const router = useRouter()
 
 const searchQuery = ref('')
-const allData = ref([]) // 存储所有数据
-const filteredData = ref([]) // 存储过滤后的数据
-const currentPageData = ref([]) // 当前页显示的数据
+const allData = ref([])
+const filteredData = ref([])
+const currentPageData = ref([])
 const dateDistribution = ref([])
 const durationDistribution = ref([])
 const loading = ref(false)
@@ -47,85 +48,72 @@ const loadSearchState = () => {
     pageSize.value = state.pageSize || 10
     totalRecords.value = state.totalRecords || 0
 
-    // 清除保存的状态，避免重复加载
     sessionStorage.removeItem('homeSearchState')
     return true
   }
   return false
 }
 
-//计算总数
+// 计算属性
 const avgDuration = computed(() => {
   if (filteredData.value.length === 0) return 0
   const total = filteredData.value.reduce((sum, item) => sum + item.duration, 0)
   return (total / filteredData.value.length).toFixed(2)
 })
 
-//计算总页数
 const totalPages = computed(() => {
   return Math.ceil(filteredData.value.length / pageSize.value)
 })
 
-//时间戳格式化
+// 时间戳格式化
 const formatTime = (timestamp) => {
   if (!timestamp) return ''
   return timestamp.replace('T', ' ').replace(/\.000Z$/, '')
 }
 
-//请求，我这里做的是后端返回所有，前端后面在做分页
+// 请求数据 - 使用封装的API
 const fetchData = async () => {
   loading.value = true
 
   try {
     // 构建查询参数
-    const params = new URLSearchParams()
-    if (searchQuery.value) {
-      params.append('destination_number', searchQuery.value)
-    }
-    if (startDate.value) {
-      params.append('start_date', startDate.value)
-    }
-    if (endDate.value) {
-      params.append('end_date', endDate.value)
+    const params = {
+      destination_number: searchQuery.value,
+      start_date: startDate.value,
+      end_date: endDate.value
     }
 
-    const response = await fetch(`http://localhost:3000/api/cdr?${params.toString()}`)
-    const data = await response.json()
+    // 使用封装的API
+    const response = await cdrApi.getCDRList(params)
 
-    if (data.success) {
-      allData.value = data.data
-      // 应用搜索过滤
+    if (response.success) {
+      allData.value = response.data
       applyFilter()
-      // 保存搜索状态
       saveSearchState()
-      ElMessage.success(`查询到 ${data.data.length} 条记录`)
-    } else {
-      ElMessage.error('获取数据失败: ' + data.message)
+      ElMessage.success(`查询到 ${response.data.length} 条记录`)
     }
   } catch (error) {
+    // 错误已经在API层处理，这里不需要再次显示
     console.error('获取数据失败:', error)
-    ElMessage.error('获取数据失败，检查后端服务是否启动')
   } finally {
     loading.value = false
   }
 }
 
-//搜索过滤
+// 搜索过滤
 const applyFilter = () => {
   filteredData.value = allData.value
 
   totalRecords.value = filteredData.value.length
-  currentPage.value = 1 // 重置到第一页
+  currentPage.value = 1
   updateCurrentPageData()
 
-  //更新统计数据、图表
   generateDateDistribution(filteredData.value)
   generateDurationDistribution(filteredData.value)
   nextTick(() => {
     initCharts()
   })
 }
-
 
 // 清除时间筛选
 const clearDateFilter = () => {
@@ -135,14 +123,14 @@ const clearDateFilter = () => {
 }
 
 // 清除所有筛选
-const clearAllFilter = ()=>{
+const clearAllFilter = () => {
   startDate.value = ''
   endDate.value = ''
   searchQuery.value = ''
   fetchData()
 }
 
-//日期验证
+// 日期验证
 const disabledStartDate = (time) => {
   if (endDate.value) {
     return time.getTime() > new Date(endDate.value).getTime()
@@ -157,18 +145,19 @@ const disabledEndDate = (time) => {
   return false
 }
 
-//更新当前页数据
+// 更新当前页数据
 const updateCurrentPageData = () => {
   const startIndex = (currentPage.value - 1) * pageSize.value
   const endIndex = startIndex + pageSize.value
   currentPageData.value = filteredData.value.slice(startIndex, endIndex)
 }
 
+// 生成日期分布
 const generateDateDistribution = (data) => {
   const distribution = {}
 
   data.forEach(item => {
-    const date = item.end_stamp.split('T')[0] // 提取日期部分
+    const date = item.end_stamp.split('T')[0]
     distribution[date] = (distribution[date] || 0) + 1
   })
 
@@ -178,8 +167,8 @@ const generateDateDistribution = (data) => {
   })).sort((a, b) => a.date.localeCompare(b.date))
 }
 
+// 生成时长分布
 const generateDurationDistribution = (data) => {
-  //饼状图的时长区间
   const ranges = [
     { min: 0, max: 10, label: '0-10秒' },
     { min: 10, max: 30, label: '11-30秒' },
@@ -208,8 +197,9 @@ const generateDurationDistribution = (data) => {
   }))
 }
 
+// 初始化图表
 const initCharts = () => {
-  //日期分布图表，柱状图那个
+  // 日期分布图表
   const dateChartDom = document.getElementById('dateChart')
   if (dateChartDom) {
     dateChart.value = echarts.init(dateChartDom)
@@ -272,7 +262,7 @@ const initCharts = () => {
     dateChart.value.setOption(dateOption)
   }
 
-  //时长分布的图表，饼状图那个
+  // 时长分布图表
   const durationChartDom = document.getElementById('durationChart')
   if (durationChartDom) {
     durationChart.value = echarts.init(durationChartDom)
@@ -324,17 +314,20 @@ const initCharts = () => {
   }
 }
 
+// 搜索
 const handleSearch = () => {
   applyFilter()
   saveSearchState()
 }
 
+// 清空搜索
 const handleClear = () => {
   searchQuery.value = ''
   applyFilter()
   saveSearchState()
 }
 
+// 分页处理
 const handlePageChange = (page) => {
   currentPage.value = page
   updateCurrentPageData()
@@ -348,11 +341,12 @@ const handlePageSizeChange = (size) => {
   saveSearchState()
 }
 
-//导出csv文件，
-const exportData = (exportType = 'all') => {
+// 导出数据
+const exportData = async (exportType = 'all') => {
   try {
     let dataToExport = []
     let dataType = ''
+
     if (exportType === 'current') {
       dataToExport = currentPageData.value
       dataType = '当前页'
@@ -360,13 +354,15 @@ const exportData = (exportType = 'all') => {
       dataToExport = filteredData.value
       dataType = '全部'
     }
+
     if (dataToExport.length === 0) {
       ElMessage.warning(`没有${dataType}数据可导出`)
       return
     }
+
     const headers = ['ID', '主叫号码', '被叫号码','转接号码', '开始时间', '结束时间', '计费时长(秒)','呼出人姓名']
     const csvContent = [
-      headers.join(','), // 表头
+      headers.join(','),
       ...dataToExport.map(item => [
         item.id,
         `"${item.caller_id_number || ''}"`,
@@ -400,32 +396,33 @@ const exportData = (exportType = 'all') => {
   }
 }
 
-const viewDetail = (row) => {
-  // 保存当前搜索状态
+// 查看详情 - 使用封装的API
+const viewDetail = async (row) => {
   saveSearchState()
 
-  // 使用路由跳转，传递ID参数
-  router.push({
-    path: `/details`,
-    query: {
-      id: row.id
-    }
-  })
+  try {
+    // 如果需要先获取详情数据，可以在这里调用
+    // const detail = await cdrApi.getCDRDetail(row.id)
+
+    router.push({
+      path: `/details`,
+      query: {
+        id: row.id
+      }
+    })
+  } catch (error) {
+    console.error('跳转到详情页失败:', error)
+  }
 }
 
 onMounted(() => {
-  // 尝试加载保存的搜索状态
   const hasSavedState = loadSearchState()
-
   if (hasSavedState) {
-    // 如果有保存的状态，重新获取数据
     fetchData()
   } else {
-    // 否则执行默认的数据获取
     fetchData()
   }
 
-  //监听窗口大小变化 重新渲染图表
   window.addEventListener('resize', () => {
     if (dateChart.value) {
       dateChart.value.resize()
@@ -445,7 +442,7 @@ onMounted(() => {
       </el-header>
 
       <el-main>
-        <!-- 搜索区域 -->
+        <!--搜索区域（含号码、日期筛选-->
         <el-card shadow="hover" style="margin-bottom: 20px;">
           <template #header>
             <div class="card-header">
@@ -471,7 +468,6 @@ onMounted(() => {
               </el-button>
             </el-col>
           </el-row>
-
           <el-row :gutter="20">
             <el-col :span="9">
               <el-date-picker
@@ -494,6 +490,7 @@ onMounted(() => {
               />
             </el-col>
 
+            <!--清除筛选区域-->
             <el-col :span="3">
               <el-button @click="clearDateFilter" size="large" style="width: 100%;background-color: #55DDEE;color: #fff;">
                 清除时间筛选
@@ -507,7 +504,7 @@ onMounted(() => {
           </el-row>
         </el-card>
 
-        <!-- 统计信息 -->
+        <!--统计信息区域-->
         <el-row :gutter="20" style="margin-bottom: 20px;">
           <el-col :span="8">
             <el-card shadow="hover">
@@ -544,7 +541,7 @@ onMounted(() => {
           </el-col>
         </el-row>
 
-        <!-- 图表区域 -->
+        <!--通话日期和时长图标，用的echart-->
         <el-row :gutter="20" style="margin-bottom: 20px;">
           <el-col :span="12">
             <el-card shadow="hover">
@@ -568,7 +565,7 @@ onMounted(() => {
           </el-col>
         </el-row>
 
-        <!-- 数据表格 -->
+        <!--数据表格部分，包含下载和分页-->
         <el-card shadow="hover">
           <template #header>
             <div class="card-header">
