@@ -1,0 +1,8 @@
+1 命令行在后端的根目录(server.js同级目录)运行以下命令：
+docker build -t cdr-api:latest .
+若命令行输出
+Successfully built <镜像ID>
+Successfully tagged cdr-api:latest
+代表构建成功
+2 在容器上运行 在命令行运行以下指令：
+docker compose up -d --build

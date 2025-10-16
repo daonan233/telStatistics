@@ -1,0 +1,17 @@
+version: '3.9'
+
+services:
+  api:
+    build: .
+    container_name: cdr-api
+    ports:
+      - "3000:3000"
+    # 先加载你现有的 .env
+    env_file:
+      - .env
+    # 再用 environment 覆盖容器专用值
+    environment:
+      DB_HOST: host.docker.internal     # 覆盖 .env 里的 localhost
+      RECORDINGS_DIR: /recordings       # 容器内的挂载点
+    volumes:
+      - "D:\\recordings:/recordings:ro" # 挂载你的录音目录（只读）
