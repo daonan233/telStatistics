@@ -14,11 +14,17 @@ const router = createRouter({
             path: '/home',
             name: 'home',
             component: Home,
+            meta: {
+                keepAlive: true
+            }
         },
         {
             path:'/details',
             name:'details',
-            component: () => import('@/pages/details.vue')
+            component: () => import('@/pages/details.vue'),
+            meta: {
+                keepAlive: true
+            }
         }
 
     ]

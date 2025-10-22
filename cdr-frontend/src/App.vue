@@ -7,7 +7,9 @@ import { provide } from 'vue'
 
 <template>
   <!-- 一级路由出口 -->
+  <keep-alive v-if="$route.meta.keepAlive">
   <router-view></router-view>
+  </keep-alive>
 </template>
 
 <style>

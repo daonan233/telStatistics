@@ -90,72 +90,36 @@ async function findRecordingByUuid(uuid) {
     return recordingIndex.get(key) || null;
 }
 
-// ---------- 处理关联记录的辅助函数（修正版本） ----------
+// 处理转接号码
 async function processLinkedRecords(records) {
     const result = [];
     const processedIds = new Set();
-
-    // 创建UUID到记录的映射，方便快速查找
     const uuidToRecordMap = new Map();
-    // 创建bleg_uuid到记录的映射，用于快速查找父记录
-    const blegUuidToRecordMap = new Map();
-
-    // 构建映射
     records.forEach(record => {
         if (record.uuid) {
             uuidToRecordMap.set(record.uuid.toLowerCase(), record);
         }
-        if (record.bleg_uuid) {
-            blegUuidToRecordMap.set(record.bleg_uuid.toLowerCase(), record);
-        }
     });
-
     // 处理所有记录
-    for (const record of records) {
+    for (const record of records.reverse()) {
         if (processedIds.has(record.id)) continue;
 
-        // 检查当前记录是否是某个记录的bleg_uuid（即它是B记录）
-        const parentRecord = blegUuidToRecordMap.get(record.uuid?.toLowerCase());
-
-        if (parentRecord && !processedIds.has(parentRecord.id)) {
-            // 当前记录是B记录，父记录是A记录
-            // 修改A记录：添加转接号码（B的destination_number）
-            const recordA = {
-                ...parentRecord,
-                trans_number: record.destination_number  // B的destination_number作为A的转接号码
-            };
-
-            // 修改B记录：使用A的billsec
-            const recordB = {
-                ...record,
-                billsec: parentRecord.billsec  // A的billsec作为B的billsec
-            };
-
-            processedIds.add(parentRecord.id);
-            processedIds.add(record.id);
-            result.push(recordA, recordB);
-        } else if (record.bleg_uuid) {
-            // 当前记录是A记录，查找对应的B记录
+        // A.bleg_uuid == B
+        if (record.bleg_uuid) {
             const linkedRecord = uuidToRecordMap.get(record.bleg_uuid.toLowerCase());
 
             if (linkedRecord && !processedIds.has(linkedRecord.id)) {
-                // 修改A记录：添加转接号码（B的destination_number）
-                const recordA = {
+                const processedRecord = {
                     ...record,
+                    duration: linkedRecord.duration,
+                    billsec: linkedRecord.billsec,
                     trans_number: linkedRecord.destination_number
                 };
-
-                // 修改B记录：使用A的billsec
-                const recordB = {
-                    ...linkedRecord,
-                    billsec: record.billsec
-                };
-
                 processedIds.add(record.id);
                 processedIds.add(linkedRecord.id);
-                result.push(recordA, recordB);
+                result.push(processedRecord);
             } else {
-                // 有bleg_uuid但找不到对应的B记录
+                // 有bleg_uuid但找不到对应记录的
                 result.push({
                     ...record,
                     trans_number: null
@@ -163,17 +127,31 @@ async function processLinkedRecords(records) {
                 processedIds.add(record.id);
             }
         } else {
-            // 没有关联的记录
-            result.push({
-                ...record,
-                trans_number: null
-            });
-            processedIds.add(record.id);
+            let isBRecord = false;
+            for (const otherRecord of records) {
+                if (otherRecord.bleg_uuid && otherRecord.bleg_uuid.toLowerCase() === record.uuid?.toLowerCase()) {
+                    isBRecord = true;
+                    break;
+                }
+            }
+
+            // 如果当前记录是B记录（被其他记录引用），则跳过不加入结果
+            if (!isBRecord) {
+                // 没有关联的记录，也不是B记录
+                result.push({
+                    ...record,
+                    trans_number: null
+                });
+                processedIds.add(record.id);
+            } else {
+                // 当前记录是B记录，标记为已处理但不加入结果
+                processedIds.add(record.id);
+            }
         }
     }
 
     // 按照原始ID顺序排序返回
-    return result.sort((a, b) => a.id - b.id);
+    return result.sort((a, b) => b.start_stamp - a.start_stamp);
 }
 
 // 获取所有信息
@@ -268,12 +246,13 @@ app.get('/api/cdr/:id', async (req, res) => {
 
         // 处理关联记录信息
         let trans_number = null;
-        let final_billsec = record.billsec; // 默认使用自己的billsec
+        let final_duration = record.duration;
+        let final_billsec = record.billsec;
 
-        // 情况1：当前记录有bleg_uuid（是A记录），需要找B记录获取转接号码
+        // 如果当前记录有bleg_uuid（是A记录），查找对应的B记录
         if (record.bleg_uuid) {
             const bRecordQuery = `
-                SELECT destination_number 
+                SELECT destination_number, duration, billsec
                 FROM cdr 
                 WHERE uuid = $1
             `;
@@ -282,21 +261,8 @@ app.get('/api/cdr/:id', async (req, res) => {
             if (bRecordResult.rows.length > 0) {
                 const bRecord = bRecordResult.rows[0];
                 trans_number = bRecord.destination_number;
-            }
-        }
-        // 情况2：当前记录没有bleg_uuid，但可能是B记录（其他记录的bleg_uuid指向当前记录的uuid）
-        else {
-            const aRecordQuery = `
-                SELECT billsec 
-                FROM cdr 
-                WHERE bleg_uuid = $1
-            `;
-            const aRecordResult = await pool.query(aRecordQuery, [record.uuid]);
-
-            if (aRecordResult.rows.length > 0) {
-                const aRecord = aRecordResult.rows[0];
-                // 作为B记录，使用A记录的billsec
-                final_billsec = aRecord.billsec;
+                final_duration = bRecord.duration;  // A使用B的duration
+                final_billsec = bRecord.billsec;    // A使用B的billsec
             }
         }
 
@@ -305,7 +271,8 @@ app.get('/api/cdr/:id', async (req, res) => {
             data: {
                 ...record,
                 trans_number: trans_number,
-                billsec: final_billsec, // 使用处理后的billsec
+                duration: final_duration,  // 使用处理后的duration
+                billsec: final_billsec,    // 使用处理后的billsec
                 has_audio: !!hasRecording
             }
         });

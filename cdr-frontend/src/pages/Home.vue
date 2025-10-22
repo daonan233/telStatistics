@@ -1,29 +1,32 @@
 <script setup>
-import { ref, onMounted, computed, nextTick } from 'vue'
+import { ref, onMounted, computed, nextTick, onUnmounted } from 'vue'
 import { ElMessage } from 'element-plus'
 import * as echarts from 'echarts'
 import { Clock, DataBoard, Document, Download, Search } from '@element-plus/icons-vue'
 import { useRouter } from 'vue-router'
 import { cdrApi } from '@/service/api'
+import { useSearchStore } from '@/stores/search'
 
 const router = useRouter()
+const searchStore = useSearchStore()
 
-const searchQuery = ref('')
-const allData = ref([])
-const filteredData = ref([])
+// 从 store 中获取状态
+const searchQuery = ref(searchStore.searchQuery)
+const allData = ref(searchStore.allData)
+const filteredData = ref(searchStore.filteredData)
 const currentPageData = ref([])
-const dateDistribution = ref([])
-const durationDistribution = ref([])
+const dateDistribution = ref(searchStore.dateDistribution)
+const durationDistribution = ref(searchStore.durationDistribution)
 const loading = ref(false)
-const currentPage = ref(1)
-const pageSize = ref(10)
-const totalRecords = ref(0)
+const currentPage = ref(searchStore.currentPage)
+const pageSize = ref(searchStore.pageSize)
+const totalRecords = ref(searchStore.totalRecords)
 const dateChart = ref(null)
 const durationChart = ref(null)
-const startDate = ref('')
-const endDate = ref('')
+const startDate = ref(searchStore.startDate)
+const endDate = ref(searchStore.endDate)
 
-// 保存搜索状态
+// 保存状态到 store
 const saveSearchState = () => {
   const state = {
     searchQuery: searchQuery.value,
@@ -31,27 +34,13 @@ const saveSearchState = () => {
     endDate: endDate.value,
     currentPage: currentPage.value,
     pageSize: pageSize.value,
-    totalRecords: totalRecords.value
+    totalRecords: totalRecords.value,
+    allData: allData.value,
+    filteredData: filteredData.value,
+    dateDistribution: dateDistribution.value,
+    durationDistribution: durationDistribution.value
   }
-  sessionStorage.setItem('homeSearchState', JSON.stringify(state))
-}
-
-// 加载搜索状态
-const loadSearchState = () => {
-  const savedState = sessionStorage.getItem('homeSearchState')
-  if (savedState) {
-    const state = JSON.parse(savedState)
-    searchQuery.value = state.searchQuery || ''
-    startDate.value = state.startDate || ''
-    endDate.value = state.endDate || ''
-    currentPage.value = state.currentPage || 1
-    pageSize.value = state.pageSize || 10
-    totalRecords.value = state.totalRecords || 0
-
-    sessionStorage.removeItem('homeSearchState')
-    return true
-  }
-  return false
+  searchStore.saveSearchState(state)
 }
 
 // 计算属性
@@ -113,6 +102,8 @@ const applyFilter = () => {
   nextTick(() => {
     initCharts()
   })
+
+  saveSearchState()
 }
 
 // 清除时间筛选
@@ -412,22 +403,33 @@ const viewDetail = async (row) => {
   }
 }
 
+// 窗口调整大小处理
+const handleResize = () => {
+  if (dateChart.value) {
+    dateChart.value.resize()
+  }
+  if (durationChart.value) {
+    durationChart.value.resize()
+  }
+}
+
 onMounted(() => {
-  const hasSavedState = loadSearchState()
-  if (hasSavedState) {
+  // 检查是否有数据，如果没有则重新获取
+  if (allData.value.length === 0) {
     fetchData()
   } else {
-    fetchData()
+    // 有数据，直接更新当前页数据和图表
+    updateCurrentPageData()
+    nextTick(() => {
+      initCharts()
+    })
   }
 
-  window.addEventListener('resize', () => {
-    if (dateChart.value) {
-      dateChart.value.resize()
-    }
-    if (durationChart.value) {
-      durationChart.value.resize()
-    }
-  })
+  window.addEventListener('resize', handleResize)
+})
+
+onUnmounted(() => {
+  window.removeEventListener('resize', handleResize)
 })
 </script>
 
