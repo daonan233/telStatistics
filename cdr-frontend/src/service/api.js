@@ -1,7 +1,7 @@
 import { ElMessage } from 'element-plus'
 
 // 获取环境变量中的基础URL
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000'
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://134.134.64.196:8888'
 const API_TIMEOUT = parseInt(import.meta.env.VITE_API_TIMEOUT) || 10000
 
 // 请求超时处理
