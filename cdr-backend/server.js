@@ -104,11 +104,11 @@ async function processLinkedRecords(records) {
     for (const record of records.reverse()) {
         if (processedIds.has(record.id)) continue;
 
-        // A.bleg_uuid == B
+        // A.bleg_uuid == B.uuid
         if (record.bleg_uuid) {
             const linkedRecord = uuidToRecordMap.get(record.bleg_uuid.toLowerCase());
 
-            if (linkedRecord && !processedIds.has(linkedRecord.id)) {
+            if (linkedRecord) {
                 const processedRecord = {
                     ...record,
                     duration: linkedRecord.duration,
@@ -262,7 +262,8 @@ app.get('/api/cdr/:id', async (req, res) => {
                 const bRecord = bRecordResult.rows[0];
                 trans_number = bRecord.destination_number;
                 final_duration = bRecord.duration;  // A使用B的duration
-                final_billsec = bRecord.billsec;    // A使用B的billsec
+                final_billsec = bRecord.billsec;    // .......billsec
+
             }
         }
 
@@ -271,8 +272,8 @@ app.get('/api/cdr/:id', async (req, res) => {
             data: {
                 ...record,
                 trans_number: trans_number,
-                duration: final_duration,  // 使用处理后的duration
-                billsec: final_billsec,    // 使用处理后的billsec
+                duration: final_duration,
+                billsec: final_billsec,
                 has_audio: !!hasRecording
             }
         });
